@@ -21,11 +21,13 @@ function App() {
       const response = await fetch('http://localhost:8000/game', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scenario, password }),
+        body: JSON.stringify({ scenario, player_name: playerName, player_class: playerClass, password }),
       });
       const data = await response.json();
       console.log("Game created:", data);
       setGameId(data.game_id);
+      setPlayerId(data.player_id);
+      setIsHost(true);
       setView('lobby');
     } catch (error) {
       console.error("Error creating game:", error);
@@ -72,9 +74,12 @@ function App() {
       setSocket(ws);
 
       const interval = setInterval(async () => {
-        const response = await fetch(`http://localhost:8000/game/${gameId}`);
+        const response = await fetch(`http://localhost:8000/game/${gameId}/status`);
         const data = await response.json();
         setPlayers(data.players);
+        if (data.status !== 'pending') {
+          setGameState(data.game_state);
+        }
       }, 1000);
 
       return () => {
@@ -97,6 +102,18 @@ function App() {
       {view === 'create' && (
         <div>
           <h2>Create Game</h2>
+          <input
+            type="text"
+            placeholder="Your Name"
+            value={playerName}
+            onChange={(e) => setPlayerName(e.target.value)}
+          />
+          <input
+            type="text"
+            placeholder="Your Class"
+            value={playerClass}
+            onChange={(e) => setPlayerClass(e.target.value)}
+          />
           <input
             type="text"
             placeholder="Scenario"

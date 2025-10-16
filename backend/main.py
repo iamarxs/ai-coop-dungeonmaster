@@ -45,6 +45,8 @@ manager = ConnectionManager()
 
 class CreateGameRequest(BaseModel):
     scenario: str
+    player_name: str
+    player_class: str
     password: Optional[str] = None
 
 @app.post("/game")
@@ -52,7 +54,10 @@ async def create_game(request: CreateGameRequest):
     game_id = str(uuid.uuid4())
     game = Game(id=game_id, scenario=request.scenario, game_state="pending", password=request.password)
     games[game_id] = game
-    return {"game_id": game_id}
+    player_id = str(uuid.uuid4())
+    player = Player(id=player_id, name=request.player_name, player_class=request.player_class, is_host=True)
+    game.players.append(player)
+    return {"game_id": game_id, "player_id": player_id}
 
 class JoinGameRequest(BaseModel):
     player_name: str
@@ -100,6 +105,13 @@ def get_game(game_id: str):
     if game_id not in games:
         raise HTTPException(status_code=404, detail="Game not found")
     return games[game_id]
+
+@app.get("/game/{game_id}/status")
+def get_game_status(game_id: str):
+    if game_id not in games:
+        raise HTTPException(status_code=404, detail="Game not found")
+    game = games[game_id]
+    return {"status": game.status, "players": [p.dict() for p in game.players]}
 
 @app.websocket("/ws/{game_id}/{player_id}")
 async def websocket_endpoint(websocket: WebSocket, game_id: str, player_id: str):
