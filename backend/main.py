@@ -56,6 +56,7 @@ async def create_game(request: CreateGameRequest):
 
 class JoinGameRequest(BaseModel):
     player_name: str
+    player_class: str
     password: Optional[str] = None
 
 @app.post("/game/{game_id}/join")
@@ -69,9 +70,9 @@ async def join_game(game_id: str, request: JoinGameRequest):
 
     player_id = str(uuid.uuid4())
     is_host = not game.players
-    player = Player(id=player_id, name=request.player_name, is_host=is_host)
+    player = Player(id=player_id, name=request.player_name, player_class=request.player_class, is_host=is_host)
     game.players.append(player)
-    await manager.broadcast(f"Player {request.player_name} has joined the game.", game_id)
+    await manager.broadcast(f"Player {request.player_name} ({request.player_class}) has joined the game.", game_id)
     return {"player_id": player_id, "is_host": is_host}
 
 class StartGameRequest(BaseModel):
@@ -89,7 +90,7 @@ async def start_game(game_id: str, request: StartGameRequest):
         raise HTTPException(status_code=403, detail="Only the host can start the game")
 
     game.status = "in_progress"
-    initial_story = await generate_initial_story(game.scenario)
+    initial_story = await generate_initial_story(game.scenario, game.players)
     game.game_state = initial_story
     await manager.broadcast(initial_story, game_id)
     return {"message": "Game started"}
@@ -112,8 +113,10 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str, player_id: str)
 
             # If all players have submitted their actions, process the turn
             if len(game.turns) == len(game.players):
-                player_actions = [t.action for t in game.turns]
-                new_game_state = await process_turn(game.game_state, player_actions)
+                player_actions = [(t.player_id, t.action) for t in game.turns]
+                new_game_state = await process_turn(
+                    game.game_state, game.players, player_actions
+                )
                 game.game_state = new_game_state
                 game.turns = []
                 await manager.broadcast(new_game_state, game_id)
