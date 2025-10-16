@@ -77,9 +77,14 @@ function App() {
         const response = await fetch(`http://localhost:8000/game/${gameId}/status`);
         const data = await response.json();
         setPlayers(data.players);
-        if (data.status !== 'pending') {
-          setGameState(data.game_state);
-        }
+        setGameState((prevGameState) => {
+          // If the game state is empty (e.g., on first load/reconnect), populate it.
+          // Otherwise, let the WebSocket handle all subsequent game state updates to avoid overwriting streamed content.
+          if (data.status !== 'pending' && !prevGameState) {
+            return data.game_state;
+          }
+          return prevGameState; // Return the existing state if it's already populated
+        });
       }, 1000);
 
       return () => {
@@ -87,7 +92,7 @@ function App() {
         clearInterval(interval);
       };
     }
-  }, [gameId, playerId]);
+  }, [gameId, playerId, gameState]);
 
   const toggleTheme = () => {
     setTheme((prevTheme) => (prevTheme === 'dark' ? 'light' : 'dark'));

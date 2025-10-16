@@ -1,11 +1,11 @@
+import uuid
+from typing import Dict, List, Optional
+
+from ai import generate_initial_story, process_turn
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from models import Game, Player, Turn
 from pydantic import BaseModel
-from typing import Dict, List, Optional
-import uuid
-
-from .models import Game, Player, Turn
-from .ai import generate_initial_story, process_turn
 
 app = FastAPI()
 
@@ -22,6 +22,7 @@ app.add_middleware(
 )
 
 games: Dict[str, Game] = {}
+
 
 class ConnectionManager:
     def __init__(self):
@@ -41,7 +42,9 @@ class ConnectionManager:
             for connection in self.active_connections[game_id]:
                 await connection.send_text(message)
 
+
 manager = ConnectionManager()
+
 
 class CreateGameRequest(BaseModel):
     scenario: str
@@ -49,20 +52,27 @@ class CreateGameRequest(BaseModel):
     player_class: str
     password: Optional[str] = None
 
+
 @app.post("/game")
 async def create_game(request: CreateGameRequest):
     game_id = str(uuid.uuid4())
-    game = Game(id=game_id, scenario=request.scenario, game_state="pending", password=request.password)
+    game = Game(
+        id=game_id, scenario=request.scenario, game_state="pending", password=request.password
+    )
     games[game_id] = game
     player_id = str(uuid.uuid4())
-    player = Player(id=player_id, name=request.player_name, player_class=request.player_class, is_host=True)
+    player = Player(
+        id=player_id, name=request.player_name, player_class=request.player_class, is_host=True
+    )
     game.players.append(player)
     return {"game_id": game_id, "player_id": player_id}
+
 
 class JoinGameRequest(BaseModel):
     player_name: str
     player_class: str
     password: Optional[str] = None
+
 
 @app.post("/game/{game_id}/join")
 async def join_game(game_id: str, request: JoinGameRequest):
@@ -75,13 +85,19 @@ async def join_game(game_id: str, request: JoinGameRequest):
 
     player_id = str(uuid.uuid4())
     is_host = not game.players
-    player = Player(id=player_id, name=request.player_name, player_class=request.player_class, is_host=is_host)
+    player = Player(
+        id=player_id, name=request.player_name, player_class=request.player_class, is_host=is_host
+    )
     game.players.append(player)
-    await manager.broadcast(f"Player {request.player_name} ({request.player_class}) has joined the game.", game_id)
+    await manager.broadcast(
+        f"Player {request.player_name} ({request.player_class}) has joined the game.", game_id
+    )
     return {"player_id": player_id, "is_host": is_host}
+
 
 class StartGameRequest(BaseModel):
     player_id: str
+
 
 @app.post("/game/{game_id}/start")
 async def start_game(game_id: str, request: StartGameRequest):
@@ -100,11 +116,13 @@ async def start_game(game_id: str, request: StartGameRequest):
     await manager.broadcast(initial_story, game_id)
     return {"message": "Game started"}
 
+
 @app.get("/game/{game_id}")
 def get_game(game_id: str):
     if game_id not in games:
         raise HTTPException(status_code=404, detail="Game not found")
     return games[game_id]
+
 
 @app.get("/game/{game_id}/status")
 def get_game_status(game_id: str):
@@ -112,6 +130,7 @@ def get_game_status(game_id: str):
         raise HTTPException(status_code=404, detail="Game not found")
     game = games[game_id]
     return {"status": game.status, "players": [p.dict() for p in game.players]}
+
 
 @app.websocket("/ws/{game_id}/{player_id}")
 async def websocket_endpoint(websocket: WebSocket, game_id: str, player_id: str):
@@ -126,9 +145,7 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str, player_id: str)
             # If all players have submitted their actions, process the turn
             if len(game.turns) == len(game.players):
                 player_actions = [(t.player_id, t.action) for t in game.turns]
-                new_game_state = await process_turn(
-                    game.game_state, game.players, player_actions
-                )
+                new_game_state = await process_turn(game.game_state, game.players, player_actions)
                 game.game_state = new_game_state
                 game.turns = []
                 await manager.broadcast(new_game_state, game_id)

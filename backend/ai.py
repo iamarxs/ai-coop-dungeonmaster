@@ -1,6 +1,9 @@
+# Do not modify the modules to include a dot at the beginning, as this will break imports.
 import ollama
-from .ai_config import OLLAMA_MODEL
-from .models import Player
+from ai_config import OLLAMA_MODEL
+from models import Player
+
+client = ollama.AsyncClient()
 
 
 async def generate_initial_story(scenario: str, players: list[Player]) -> str:
@@ -14,12 +17,10 @@ async def generate_initial_story(scenario: str, players: list[Player]) -> str:
         "Describe the starting situation to the players. "
         "Let the players choose their actions freely, without giving options."
     )
-    response = ollama.generate(
-        model=OLLAMA_MODEL,
-        prompt=prompt,
-        options={"num_ctx": 16384}
+    response = await client.generate(
+        model=OLLAMA_MODEL, prompt=prompt, stream=False, options={"num_ctx": 16384}
     )
-    return response['response']
+    return response["response"]
 
 
 async def process_turn(
@@ -30,11 +31,14 @@ async def process_turn(
         player = next((p for p in players if p.id == player_id), None)
         if player:
             prompt += f"{player.name} the {player.player_class} wants to: {action}\n"
-    prompt += "\nUpdate the game state based on the players' actions."
-
-    response = ollama.generate(
-        model=OLLAMA_MODEL,
-        prompt=prompt,
-        options={"num_ctx": 8192}
+    prompt += (
+        "\nUpdate the game state based on the players' actions, describing it from the players' "
+        "perspective. Act the role of any non-player "
+        "characters as needed. Keep the story engaging and coherent. Keep the plot challenging, "
+        "acting as any antagonists or obstacles the players may face."
     )
-    return response['response']
+
+    response = await client.generate(
+        model=OLLAMA_MODEL, prompt=prompt, stream=False, options={"num_ctx": 16384}
+    )
+    return response["response"]
