@@ -1,0 +1,21 @@
+from pydantic import BaseModel
+from typing import List, Optional
+
+class Player(BaseModel):
+    id: str
+    name: str
+    is_host: bool = False
+    is_alive: bool = True
+
+class Turn(BaseModel):
+    player_id: str
+    action: str
+
+class Game(BaseModel):
+    id: str
+    scenario: str
+    players: List[Player] = []
+    game_state: str
+    turns: List[Turn] = []
+    password: Optional[str] = None # For protecting the game
+    status: str = "pending" # pending, in_progress, finished
