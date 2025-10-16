@@ -72,7 +72,7 @@ async def join_game(game_id: str, request: JoinGameRequest):
     player = Player(id=player_id, name=request.player_name, is_host=is_host)
     game.players.append(player)
     await manager.broadcast(f"Player {request.player_name} has joined the game.", game_id)
-    return {"player_id": player_id}
+    return {"player_id": player_id, "is_host": is_host}
 
 class StartGameRequest(BaseModel):
     player_id: str
