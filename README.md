@@ -18,19 +18,14 @@ To run this project, you will need to have the following installed:
 
 ### Backend Setup
 
-1.  **Navigate to the backend directory:**
+1.  **Install the required Python packages:**
     ```bash
-    cd backend
+    pip install -r backend/requirements.txt
     ```
 
-2.  **Install the required Python packages:**
+2.  **Run the backend server from the project root:**
     ```bash
-    pip install -r requirements.txt
-    ```
-
-3.  **Run the backend server:**
-    ```bash
-    uvicorn main:app --reload
+    uvicorn backend.main:app --reload
     ```
     The backend server will be running on `http://localhost:8000`.
 

@@ -12,7 +12,7 @@ This is a web-based multiplayer text adventure game.
 - The entry point for the frontend is `frontend/src/index.js`.
 
 **Development:**
-- To run the backend, navigate to the `backend` directory and run `uvicorn main:app --reload`.
+- To run the backend, run `uvicorn backend.main:app --reload` from the project root.
 - To run the frontend, navigate to the `frontend` directory and run `npm start`.
 - Make sure to install the dependencies for both the backend and the frontend before running the applications.
 - Backend dependencies can be installed using `pip install -r backend/requirements.txt`.

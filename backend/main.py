@@ -4,8 +4,8 @@ from pydantic import BaseModel
 from typing import Dict, List, Optional
 import uuid
 
-from models import Game, Player, Turn
-from ai import generate_initial_story, process_turn
+from .models import Game, Player, Turn
+from .ai import generate_initial_story, process_turn
 
 app = FastAPI()
 
