@@ -1,5 +1,5 @@
-import httpx
-from .ai_config import OLLAMA_API_URL, OLLAMA_MODEL
+import ollama
+from .ai_config import OLLAMA_MODEL
 from .models import Player
 
 
@@ -14,14 +14,12 @@ async def generate_initial_story(scenario: str, players: list[Player]) -> str:
         "Describe the starting situation to the players. "
         "Let the players choose their actions freely, without giving options."
     )
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-            OLLAMA_API_URL,
-            json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False},
-            timeout=60.0,
-        )
-        response.raise_for_status()
-        return response.json()["response"]
+    response = ollama.generate(
+        model=OLLAMA_MODEL,
+        prompt=prompt,
+        options={"num_ctx": 8192}
+    )
+    return response['response']
 
 
 async def process_turn(
@@ -34,11 +32,9 @@ async def process_turn(
             prompt += f"{player.name} the {player.player_class} wants to: {action}\n"
     prompt += "\nUpdate the game state based on the players' actions."
 
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-            OLLAMA_API_URL,
-            json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False},
-            timeout=60.0,
-        )
-        response.raise_for_status()
-        return response.json()["response"]
+    response = ollama.generate(
+        model=OLLAMA_MODEL,
+        prompt=prompt,
+        options={"num_ctx": 8192}
+    )
+    return response['response']
