@@ -14,6 +14,7 @@ function App() {
   const [action, setAction] = useState('');
   const [socket, setSocket] = useState(null);
   const [theme, setTheme] = useState('dark');
+  const [view, setView] = useState('create');
 
   const handleCreateGame = async () => {
     try {
@@ -25,6 +26,7 @@ function App() {
       const data = await response.json();
       console.log("Game created:", data);
       setGameId(data.game_id);
+      setView('lobby');
     } catch (error) {
       console.error("Error creating game:", error);
     }
@@ -39,6 +41,7 @@ function App() {
     const data = await response.json();
     setPlayerId(data.player_id);
     setIsHost(data.is_host);
+    setView('lobby');
   };
 
   const handleStartGame = async () => {
@@ -91,23 +94,63 @@ function App() {
         Switch to {theme === 'dark' ? 'Light' : 'Dark'} Mode
       </button>
       <h1>Multiplayer Text Adventure</h1>
-      {!gameId ? (
+      {view === 'create' && (
         <div>
           <h2>Create Game</h2>
-          <input type="text" placeholder="Scenario" value={scenario} onChange={(e) => setScenario(e.target.value)} />
-          <input type="password" placeholder="Password (optional)" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <input
+            type="text"
+            placeholder="Scenario"
+            value={scenario}
+            onChange={(e) => setScenario(e.target.value)}
+          />
+          <input
+            type="password"
+            placeholder="Password (optional)"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
           <button onClick={handleCreateGame}>Create Game</button>
+          <p>
+            Already have a game ID?{' '}
+            <button onClick={() => setView('join')}>Join a Game</button>
+          </p>
         </div>
-      ) : !playerId ? (
+      )}
+      {view === 'join' && (
         <div>
           <h2>Join Game</h2>
-          <input type="text" placeholder="Game ID" value={gameId} onChange={(e) => setGameId(e.target.value)} />
-          <input type="text" placeholder="Your Name" value={playerName} onChange={(e) => setPlayerName(e.target.value)} />
-          <input type="text" placeholder="Your Class" value={playerClass} onChange={(e) => setPlayerClass(e.target.value)} />
-          <input type="password" placeholder="Password (optional)" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <input
+            type="text"
+            placeholder="Game ID"
+            value={gameId}
+            onChange={(e) => setGameId(e.target.value)}
+          />
+          <input
+            type="text"
+            placeholder="Your Name"
+            value={playerName}
+            onChange={(e) => setPlayerName(e.target.value)}
+          />
+          <input
+            type="text"
+            placeholder="Your Class"
+            value={playerClass}
+            onChange={(e) => setPlayerClass(e.target.value)}
+          />
+          <input
+            type="password"
+            placeholder="Password (optional)"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
           <button onClick={handleJoinGame}>Join Game</button>
+          <p>
+            Want to host a game?{' '}
+            <button onClick={() => setView('create')}>Create a Game</button>
+          </p>
         </div>
-      ) : (
+      )}
+      {view === 'lobby' && (
         <div>
           <h2>Game ID: {gameId}</h2>
           <h3>Players</h3>
@@ -123,7 +166,12 @@ function App() {
             <h3>Game State</h3>
             <pre>{gameState}</pre>
           </div>
-          <input type="text" placeholder="What do you do?" value={action} onChange={(e) => setAction(e.target.value)} />
+          <input
+            type="text"
+            placeholder="What do you do?"
+            value={action}
+            onChange={(e) => setAction(e.target.value)}
+          />
           <button onClick={handleSendAction}>Send Action</button>
         </div>
       )}
