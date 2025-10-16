@@ -4,6 +4,7 @@ import './App.css';
 function App() {
   const [gameId, setGameId] = useState('');
   const [playerId, setPlayerId] = useState('');
+  const [isHost, setIsHost] = useState(false);
   const [scenario, setScenario] = useState('');
   const [password, setPassword] = useState('');
   const [playerName, setPlayerName] = useState('');
@@ -34,6 +35,7 @@ function App() {
     });
     const data = await response.json();
     setPlayerId(data.player_id);
+    setIsHost(data.is_host);
   };
 
   const handleStartGame = async () => {
@@ -87,7 +89,7 @@ function App() {
       ) : (
         <div>
           <h2>Game ID: {gameId}</h2>
-          <button onClick={handleStartGame}>Start Game</button>
+          {isHost && <button onClick={handleStartGame}>Start Game</button>}
           <div>
             <h3>Game State</h3>
             <pre>{gameState}</pre>
