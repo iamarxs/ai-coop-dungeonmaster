@@ -8,9 +8,12 @@ function App() {
   const [scenario, setScenario] = useState('');
   const [password, setPassword] = useState('');
   const [playerName, setPlayerName] = useState('');
+  const [playerClass, setPlayerClass] = useState('');
+  const [players, setPlayers] = useState([]);
   const [gameState, setGameState] = useState('');
   const [action, setAction] = useState('');
   const [socket, setSocket] = useState(null);
+  const [theme, setTheme] = useState('dark');
 
   const handleCreateGame = async () => {
     try {
@@ -31,7 +34,7 @@ function App() {
     const response = await fetch(`http://localhost:8000/game/${gameId}/join`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ player_name: playerName, password }),
+      body: JSON.stringify({ player_name: playerName, player_class: playerClass, password }),
     });
     const data = await response.json();
     setPlayerId(data.player_id);
@@ -64,12 +67,29 @@ function App() {
         setGameState((prev) => prev + '\n' + event.data);
       };
       setSocket(ws);
-      return () => ws.close();
+
+      const interval = setInterval(async () => {
+        const response = await fetch(`http://localhost:8000/game/${gameId}`);
+        const data = await response.json();
+        setPlayers(data.players);
+      }, 1000);
+
+      return () => {
+        ws.close();
+        clearInterval(interval);
+      };
     }
   }, [gameId, playerId]);
 
+  const toggleTheme = () => {
+    setTheme((prevTheme) => (prevTheme === 'dark' ? 'light' : 'dark'));
+  };
+
   return (
-    <div className="App">
+    <div className={`App ${theme}-mode`}>
+      <button onClick={toggleTheme}>
+        Switch to {theme === 'dark' ? 'Light' : 'Dark'} Mode
+      </button>
       <h1>Multiplayer Text Adventure</h1>
       {!gameId ? (
         <div>
@@ -83,12 +103,21 @@ function App() {
           <h2>Join Game</h2>
           <input type="text" placeholder="Game ID" value={gameId} onChange={(e) => setGameId(e.target.value)} />
           <input type="text" placeholder="Your Name" value={playerName} onChange={(e) => setPlayerName(e.target.value)} />
+          <input type="text" placeholder="Your Class" value={playerClass} onChange={(e) => setPlayerClass(e.target.value)} />
           <input type="password" placeholder="Password (optional)" value={password} onChange={(e) => setPassword(e.target.value)} />
           <button onClick={handleJoinGame}>Join Game</button>
         </div>
       ) : (
         <div>
           <h2>Game ID: {gameId}</h2>
+          <h3>Players</h3>
+          <ul>
+            {players.map((p) => (
+              <li key={p.id}>
+                {p.name} ({p.player_class})
+              </li>
+            ))}
+          </ul>
           {isHost && <button onClick={handleStartGame}>Start Game</button>}
           <div>
             <h3>Game State</h3>

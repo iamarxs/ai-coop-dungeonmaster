@@ -1,16 +1,46 @@
-.App {
-  text-align: center;
-  font-family: sans-serif;
+body {
+  transition: background-color 0.3s, color 0.3s;
 }
 
-input {
+.App {
+  text-align: center;
+  padding: 20px;
+}
+
+.dark-mode {
+  background-color: #121212;
+  color: #ffffff;
+}
+
+.dark-mode input,
+.dark-mode button {
+  background-color: #333;
+  color: #ffffff;
+  border: 1px solid #555;
+}
+
+.dark-mode pre {
+  background-color: #222;
+  border: 1px solid #444;
+  color: #eee;
+  padding: 10px;
+  text-align: left;
+  white-space: pre-wrap;
+}
+
+.light-mode {
+  background-color: #ffffff;
+  color: #000000;
+}
+
+.light-mode input {
   margin: 5px;
   padding: 10px;
   border-radius: 5px;
   border: 1px solid #ccc;
 }
 
-button {
+.light-mode button {
   padding: 10px 20px;
   border-radius: 5px;
   border: none;
@@ -19,11 +49,11 @@ button {
   cursor: pointer;
 }
 
-button:hover {
+.light-mode button:hover {
   background-color: #0056b3;
 }
 
-pre {
+.light-mode pre {
   white-space: pre-wrap;
   word-wrap: break-word;
   background-color: #f4f4f4;

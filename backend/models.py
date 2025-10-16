@@ -4,6 +4,7 @@ from typing import List, Optional
 class Player(BaseModel):
     id: str
     name: str
+    player_class: str
     is_host: bool = False
     is_alive: bool = True
 
