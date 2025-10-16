@@ -17,7 +17,7 @@ async def generate_initial_story(scenario: str, players: list[Player]) -> str:
     response = ollama.generate(
         model=OLLAMA_MODEL,
         prompt=prompt,
-        options={"num_ctx": 8192}
+        options={"num_ctx": 16384}
     )
     return response['response']
 
