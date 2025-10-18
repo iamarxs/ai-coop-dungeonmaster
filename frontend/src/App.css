@@ -60,3 +60,49 @@ body {
   padding: 15px;
   border-radius: 5px;
 }
+
+.game-state .game-narrative {
+  font-style: italic;
+  margin-bottom: 20px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+}
+
+.game-state .player-action {
+  font-weight: bold;
+}
+
+.game-state .game-narrative:last-child {
+  background-color: #e8f4ff;
+}
+
+.dark-mode .game-state .game-narrative:last-child {
+  background-color: #2a3a4a;
+}
+
+.player-status-list li {
+  margin-bottom: 5px;
+}
+
+.player-status-list .status-writing {
+  font-style: italic;
+  color: #888;
+}
+
+.player-status-list .status-dead {
+  text-decoration: line-through;
+  color: #dc3545;
+}
+
+.action-input {
+  font-size: 1.2rem;
+}
+
+.action-button {
+  font-size: 1.2rem;
+}
+
+b, strong {
+  font-weight: bold;
+}

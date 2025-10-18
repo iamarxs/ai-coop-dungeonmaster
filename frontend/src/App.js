@@ -10,11 +10,13 @@ function App() {
   const [playerName, setPlayerName] = useState('');
   const [playerClass, setPlayerClass] = useState('');
   const [players, setPlayers] = useState([]);
-  const [gameState, setGameState] = useState('');
   const [action, setAction] = useState('');
   const [socket, setSocket] = useState(null);
   const [theme, setTheme] = useState('dark');
   const [view, setView] = useState('create');
+  const [turns, setTurns] = useState([]);
+  const [currentPlayerId, setCurrentPlayerId] = useState(null);
+  const [statusMessage, setStatusMessage] = useState('');
 
   const handleCreateGame = async () => {
     try {
@@ -55,9 +57,15 @@ function App() {
   };
 
   const handleSendAction = () => {
-    if (socket) {
+    if (socket && action.trim() !== '') {
       socket.send(action);
       setAction('');
+    }
+  };
+
+  const handleKeyDown = (event) => {
+    if (event.key === 'Enter') {
+      handleSendAction();
     }
   };
 
@@ -69,30 +77,54 @@ function App() {
     if (gameId && playerId) {
       const ws = new WebSocket(`ws://localhost:8000/ws/${gameId}/${playerId}`);
       ws.onmessage = (event) => {
-        setGameState((prev) => prev + '\n' + event.data);
+        const data = JSON.parse(event.data);
+        switch (data.type) {
+          case 'game_start':
+            setTurns([{ player_id: 'game', action: data.game_state }]);
+            setPlayers(data.players);
+            setCurrentPlayerId(data.current_player_id);
+            break;
+          case 'player_joined':
+            setPlayers((prev) => [...prev, data.player]);
+            break;
+          case 'action_received':
+            setCurrentPlayerId(data.next_player_id);
+            const actingPlayer = players.find(p => p.id === data.player_id);
+            setStatusMessage(`${actingPlayer.name} has acted. Now it's ${players.find(p => p.id === data.next_player_id).name}'s turn.`);
+            break;
+          case 'new_turn':
+            setTurns((prev) => [...prev, { player_id: 'game', action: data.story_segment }]);
+            setCurrentPlayerId(data.current_player_id);
+            setStatusMessage(`A new turn begins. It's ${players.find(p => p.id === data.current_player_id).name}'s turn.`);
+            break;
+          case 'player_left':
+            setStatusMessage(`${data.player_name} has left the game.`);
+            // Optionally remove player from list
+            break;
+          default:
+            console.log("Unhandled message type:", data.type);
+        }
       };
       setSocket(ws);
 
-      const interval = setInterval(async () => {
+      // Fetch initial game state
+      const fetchGameStatus = async () => {
         const response = await fetch(`http://localhost:8000/game/${gameId}/status`);
         const data = await response.json();
-        setPlayers(data.players);
-        setGameState((prevGameState) => {
-          // If the game state is empty (e.g., on first load/reconnect), populate it.
-          // Otherwise, let the WebSocket handle all subsequent game state updates to avoid overwriting streamed content.
-          if (data.status !== 'pending' && !prevGameState) {
-            return data.game_state;
-          }
-          return prevGameState; // Return the existing state if it's already populated
-        });
-      }, 1000);
+        if (data.status !== 'pending') {
+          setPlayers(data.players);
+          setTurns(data.turns);
+          setCurrentPlayerId(data.current_player_id);
+          setView('lobby');
+        }
+      };
+      fetchGameStatus();
 
       return () => {
         ws.close();
-        clearInterval(interval);
       };
     }
-  }, [gameId, playerId, gameState]);
+  }, [gameId, playerId]);
 
   const toggleTheme = () => {
     setTheme((prevTheme) => (prevTheme === 'dark' ? 'light' : 'dark'));
@@ -176,25 +208,48 @@ function App() {
         <div>
           <h2>Game ID: {gameId}</h2>
           <h3>Players</h3>
-          <ul>
-            {players.map((p) => (
-              <li key={p.id}>
-                {p.name} ({p.player_class})
-              </li>
-            ))}
+          <ul className="player-status-list">
+            {players.map((p) => {
+              let status = p.is_alive ? 'Alive' : 'Dead';
+              if (p.id === currentPlayerId) {
+                status = 'Writing...';
+              }
+              return (
+                <li key={p.id} className={`status-${status.toLowerCase()}`}>
+                  {p.name} ({p.player_class}) - {status}
+                </li>
+              );
+            })}
           </ul>
-          {isHost && <button onClick={handleStartGame}>Start Game</button>}
+          {isHost && turns.length === 0 && <button onClick={handleStartGame}>Start Game</button>}
           <div>
-            <h3>Game State</h3>
-            <pre>{gameState}</pre>
+            <h3>Story</h3>
+            <div className="game-state">
+              {turns.map((turn, index) => {
+                const content = { __html: turn.action.replace(/"(.*?)"/g, '<b>"$1"</b>') };
+                return (
+                  <p
+                    key={index}
+                    className={turn.player_id === 'game' ? 'game-narrative' : 'player-action'}
+                    dangerouslySetInnerHTML={content}
+                  />
+                );
+              })}
+            </div>
           </div>
+          <p>{statusMessage}</p>
           <input
             type="text"
             placeholder="What do you do?"
             value={action}
             onChange={(e) => setAction(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={playerId !== currentPlayerId}
+            className="action-input"
           />
-          <button onClick={handleSendAction}>Send Action</button>
+          <button onClick={handleSendAction} disabled={playerId !== currentPlayerId} className="action-button">
+            Send Action
+          </button>
         </div>
       )}
     </div>

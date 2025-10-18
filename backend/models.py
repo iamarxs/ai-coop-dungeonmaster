@@ -24,3 +24,4 @@ class Game(BaseModel):
     turns: List[Turn] = []
     password: Optional[str] = None  # For protecting the game
     status: str = "pending"  # pending, in_progress, finished
+    current_player_index: int = 0
