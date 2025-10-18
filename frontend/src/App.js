@@ -89,7 +89,7 @@ function App() {
         setPlayers(prevPlayers => {
           switch (data.type) {
             case 'game_start':
-              setTurns([{ player_id: 'game', action: data.game_state }]);
+              setTurns([{ player_id: 'game', action: data.initial_story }]);
               setCurrentPlayerId(data.current_player_id);
               return data.players;
             case 'player_joined':
@@ -130,7 +130,7 @@ function App() {
           setTurns(data.turns);
           setCurrentPlayerId(data.current_player_id);
         }
-        setView('lobby');
+        // No need to setView here, as it's already set in handleCreateGame/handleJoinGame
       };
       fetchGameStatus();
 
@@ -240,7 +240,7 @@ function App() {
             <h3>Story</h3>
             <div className="game-state">
               {turns.map((turn, index) => {
-                const content = { __html: turn.action.replace(/"(.*?)"/g, '<b>"$1"</b>') };
+                const content = { __html: turn.action.replace(/"(.*?)"/g, '<b>"$1"</b>').replace(/\n/g, '<br />') };
                 return (
                   <p
                     key={index}

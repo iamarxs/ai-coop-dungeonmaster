@@ -59,7 +59,7 @@ class CreateGameRequest(BaseModel):
 async def create_game(request: CreateGameRequest):
     game_id = str(uuid.uuid4())
     game = Game(
-        id=game_id, scenario=request.scenario, game_state="pending", password=request.password
+        id=game_id, scenario=request.scenario, password=request.password
     )
     games[game_id] = game
     player_id = str(uuid.uuid4())
@@ -117,11 +117,10 @@ async def start_game(game_id: str, request: StartGameRequest):
 
     game.status = "in_progress"
     initial_story = await generate_initial_story(game.scenario, game.players)
-    game.game_state = initial_story
     game.turns.append(Turn(player_id="game", action=initial_story))
     await manager.broadcast({
         "type": "game_start",
-        "game_state": initial_story,
+        "initial_story": initial_story,
         "players": [p.model_dump() for p in game.players],
         "current_player_id": game.players[0].id
     }, game_id)
@@ -147,7 +146,6 @@ def get_game_status(game_id: str):
     return {
         "status": game.status,
         "players": [p.model_dump() for p in game.players],
-        "game_state": game.game_state,
         "turns": [t.model_dump() for t in game.turns],
         "current_player_id": current_player_id,
     }
@@ -172,11 +170,11 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str, player_id: str)
 
             # If all living players have submitted an action this round
             if len(game.current_round_actions) >= len([p for p in game.players if p.is_alive]):
+                game_context = "\n".join([t.action for t in game.turns])
                 player_actions = [(t.player_id, t.action) for t in game.current_round_actions]
-                new_story_segment = await process_turn(game.game_state, game.players, player_actions)
+                new_story_segment = await process_turn(game_context, game.players, player_actions)
 
                 # Update game state and reset for the next round
-                game.game_state += "\n" + new_story_segment
                 game.turns.append(Turn(player_id="game", action=new_story_segment))
                 game.current_round_actions = []
 

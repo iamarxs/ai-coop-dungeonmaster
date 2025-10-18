@@ -20,7 +20,6 @@ class Game(BaseModel):
     id: str
     scenario: str
     players: List[Player] = []
-    game_state: str
     turns: List[Turn] = []
     current_round_actions: List[Turn] = []
     password: Optional[str] = None  # For protecting the game
