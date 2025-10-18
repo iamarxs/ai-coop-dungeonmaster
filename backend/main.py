@@ -67,6 +67,8 @@ async def create_game(request: CreateGameRequest):
         id=player_id, name=request.player_name, player_class=request.player_class, is_host=True
     )
     game.players.append(player)
+    # The host doesn't connect to the websocket until after this request is complete,
+    # so we can't broadcast to them. The frontend will need to fetch the player list.
     return {"game_id": game_id, "player_id": player_id}
 
 
@@ -166,22 +168,19 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str, player_id: str)
 
             turn = Turn(player_id=player_id, action=data)
             game.turns.append(turn)
+            game.current_round_actions.append(turn)
 
-            # Move to the next player
-            while True:
-                game.current_player_index = (game.current_player_index + 1) % len(game.players)
-                next_player = game.players[game.current_player_index]
-                if next_player.is_alive:
-                    break
-
-            # If we've looped back to the start, everyone has had a turn
-            if len(game.turns) >= len([p for p in game.players if p.is_alive]):
-                player_actions = [(t.player_id, t.action) for t in game.turns if t.player_id != "game"]
+            # If all living players have submitted an action this round
+            if len(game.current_round_actions) >= len([p for p in game.players if p.is_alive]):
+                player_actions = [(t.player_id, t.action) for t in game.current_round_actions]
                 new_story_segment = await process_turn(game.game_state, game.players, player_actions)
 
                 # Update game state and reset for the next round
                 game.game_state += "\n" + new_story_segment
                 game.turns.append(Turn(player_id="game", action=new_story_segment))
+                game.current_round_actions = []
+
+                # Find the next alive player to start the new round
                 game.current_player_index = 0
                 while not game.players[game.current_player_index].is_alive:
                     game.current_player_index = (game.current_player_index + 1) % len(game.players)
@@ -191,8 +190,14 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str, player_id: str)
                     "story_segment": new_story_segment,
                     "current_player_id": game.players[game.current_player_index].id
                 }, game_id)
-
             else:
+                # Move to the next player
+                while True:
+                    game.current_player_index = (game.current_player_index + 1) % len(game.players)
+                    next_player = game.players[game.current_player_index]
+                    if next_player.is_alive:
+                        break
+                # Still waiting for other players
                 await manager.broadcast({
                     "type": "action_received",
                     "player_id": player_id,

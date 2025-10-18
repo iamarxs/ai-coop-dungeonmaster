@@ -30,6 +30,12 @@ function App() {
       setGameId(data.game_id);
       setPlayerId(data.player_id);
       setIsHost(true);
+
+      // Fetch initial game state to get the host's player data
+      const statusResponse = await fetch(`http://localhost:8000/game/${data.game_id}/status`);
+      const statusData = await statusResponse.json();
+      setPlayers(statusData.players);
+
       setView('lobby');
     } catch (error) {
       console.error("Error creating game:", error);
@@ -119,12 +125,12 @@ function App() {
       const fetchGameStatus = async () => {
         const response = await fetch(`http://localhost:8000/game/${gameId}/status`);
         const data = await response.json();
+        setPlayers(data.players);
         if (data.status !== 'pending') {
-          setPlayers(data.players);
           setTurns(data.turns);
           setCurrentPlayerId(data.current_player_id);
-          setView('lobby');
         }
+        setView('lobby');
       };
       fetchGameStatus();
 
