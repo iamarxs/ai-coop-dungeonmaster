@@ -31,11 +31,8 @@ function App() {
       setPlayerId(data.player_id);
       setIsHost(true);
 
-      // Fetch initial game state to get the host's player data
-      const statusResponse = await fetch(`http://localhost:8000/game/${data.game_id}/status`);
-      const statusData = await statusResponse.json();
-      setPlayers(statusData.players);
-
+      // The players list will be synced via the websocket connection,
+      // so no need to fetch it here.
       setView('lobby');
     } catch (error) {
       console.error("Error creating game:", error);
@@ -55,11 +52,13 @@ function App() {
   };
 
   const handleStartGame = async () => {
+    console.log("Starting game...");
     await fetch(`http://localhost:8000/game/${gameId}/start`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ player_id: playerId }),
     });
+    console.log("Start game request sent.");
   };
 
   const handleSendAction = () => {
@@ -84,15 +83,18 @@ function App() {
       const ws = new WebSocket(`ws://localhost:8000/ws/${gameId}/${playerId}`);
       ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
+        console.log("Received message:", data);
 
         // Use functional updates to avoid stale state
         setPlayers(prevPlayers => {
           switch (data.type) {
-            case 'game_start':
-              setTurns([{ player_id: 'game', action: data.initial_story }]);
-              setCurrentPlayerId(data.current_player_id);
-              return data.players;
+            case 'sync':
+                console.log("Syncing state:", data);
+                setTurns(data.turns);
+                setCurrentPlayerId(data.current_player_id);
+                return data.players;
             case 'player_joined':
+              console.log("Player joined:", data.player);
               return [...prevPlayers, data.player];
             case 'action_received':
               setCurrentPlayerId(data.next_player_id);
@@ -120,19 +122,6 @@ function App() {
         });
       };
       setSocket(ws);
-
-      // Fetch initial game state
-      const fetchGameStatus = async () => {
-        const response = await fetch(`http://localhost:8000/game/${gameId}/status`);
-        const data = await response.json();
-        setPlayers(data.players);
-        if (data.status !== 'pending') {
-          setTurns(data.turns);
-          setCurrentPlayerId(data.current_player_id);
-        }
-        // No need to setView here, as it's already set in handleCreateGame/handleJoinGame
-      };
-      fetchGameStatus();
 
       return () => {
         ws.close();

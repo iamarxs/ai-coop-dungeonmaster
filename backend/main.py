@@ -11,13 +11,9 @@ from .models import Game, Player, Turn
 
 app = FastAPI()
 
-origins = [
-    "http://localhost:3000",
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origin_regex=r"http://localhost:.*",  # Allow all localhost origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -118,10 +114,12 @@ async def start_game(game_id: str, request: StartGameRequest):
     game.status = "in_progress"
     initial_story = await generate_initial_story(game.scenario, game.players)
     game.turns.append(Turn(player_id="game", action=initial_story))
+    # Broadcast a sync message so that everyone is on the same page
     await manager.broadcast({
-        "type": "game_start",
-        "initial_story": initial_story,
+        "type": "sync",
         "players": [p.model_dump() for p in game.players],
+        "turns": [t.model_dump() for t in game.turns],
+        "status": game.status,
         "current_player_id": game.players[0].id
     }, game_id)
     return {"message": "Game started"}
@@ -154,6 +152,20 @@ def get_game_status(game_id: str):
 @app.websocket("/ws/{game_id}/{player_id}")
 async def websocket_endpoint(websocket: WebSocket, game_id: str, player_id: str):
     await manager.connect(websocket, game_id)
+    # On connect, send the current game state to the client
+    game = games[game_id]
+    current_player_id = None
+    if game.status == "in_progress" and game.players:
+        current_player_id = game.players[game.current_player_index].id
+
+    await websocket.send_text(json.dumps({
+        "type": "sync",
+        "players": [p.model_dump() for p in game.players],
+        "turns": [t.model_dump() for t in game.turns],
+        "status": game.status,
+        "current_player_id": current_player_id
+    }))
+
     try:
         while True:
             data = await websocket.receive_text()
