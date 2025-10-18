@@ -78,32 +78,40 @@ function App() {
       const ws = new WebSocket(`ws://localhost:8000/ws/${gameId}/${playerId}`);
       ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
-        switch (data.type) {
-          case 'game_start':
-            setTurns([{ player_id: 'game', action: data.game_state }]);
-            setPlayers(data.players);
-            setCurrentPlayerId(data.current_player_id);
-            break;
-          case 'player_joined':
-            setPlayers((prev) => [...prev, data.player]);
-            break;
-          case 'action_received':
-            setCurrentPlayerId(data.next_player_id);
-            const actingPlayer = players.find(p => p.id === data.player_id);
-            setStatusMessage(`${actingPlayer.name} has acted. Now it's ${players.find(p => p.id === data.next_player_id).name}'s turn.`);
-            break;
-          case 'new_turn':
-            setTurns((prev) => [...prev, { player_id: 'game', action: data.story_segment }]);
-            setCurrentPlayerId(data.current_player_id);
-            setStatusMessage(`A new turn begins. It's ${players.find(p => p.id === data.current_player_id).name}'s turn.`);
-            break;
-          case 'player_left':
-            setStatusMessage(`${data.player_name} has left the game.`);
-            // Optionally remove player from list
-            break;
-          default:
-            console.log("Unhandled message type:", data.type);
-        }
+
+        // Use functional updates to avoid stale state
+        setPlayers(prevPlayers => {
+          switch (data.type) {
+            case 'game_start':
+              setTurns([{ player_id: 'game', action: data.game_state }]);
+              setCurrentPlayerId(data.current_player_id);
+              return data.players;
+            case 'player_joined':
+              return [...prevPlayers, data.player];
+            case 'action_received':
+              setCurrentPlayerId(data.next_player_id);
+              const actingPlayer = prevPlayers.find(p => p.id === data.player_id);
+              const nextPlayer = prevPlayers.find(p => p.id === data.next_player_id);
+              if (actingPlayer && nextPlayer) {
+                setStatusMessage(`${actingPlayer.name} has acted. Now it's ${nextPlayer.name}'s turn.`);
+              }
+              return prevPlayers; // No change to players
+            case 'new_turn':
+              setTurns(prevTurns => [...prevTurns, { player_id: 'game', action: data.story_segment }]);
+              setCurrentPlayerId(data.current_player_id);
+              const currentPlayer = prevPlayers.find(p => p.id === data.current_player_id);
+              if (currentPlayer) {
+                setStatusMessage(`A new turn begins. It's ${currentPlayer.name}'s turn.`);
+              }
+              return prevPlayers; // No change to players
+            case 'player_left':
+              setStatusMessage(`${data.player_name} has left the game.`);
+              return prevPlayers.filter(p => p.name !== data.player_name);
+            default:
+              console.log("Unhandled message type:", data.type);
+              return prevPlayers;
+          }
+        });
       };
       setSocket(ws);
 
