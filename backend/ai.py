@@ -1,9 +1,10 @@
 # Do not modify the modules to include a dot at the beginning, as this will break imports.
 import ollama
-from ai_config import OLLAMA_MODEL
-from models import Player
 
-client = ollama.AsyncClient()
+from .ai_config import OLLAMA_MODEL
+from .models import Player
+
+CLIENT = ollama.AsyncClient()
 
 
 async def generate_initial_story(scenario: str, players: list[Player]) -> str:
@@ -17,8 +18,9 @@ async def generate_initial_story(scenario: str, players: list[Player]) -> str:
         "Describe the starting situation to the players. "
         "Let the players choose their actions freely, without giving options."
     )
-    response = await client.generate(
-        model=OLLAMA_MODEL, prompt=prompt, stream=False, options={"num_ctx": 16384}
+    print(f"Generating initial story. Prompt used for generation: {prompt}")
+    response = await CLIENT.generate(
+        model=OLLAMA_MODEL, prompt=prompt, stream=False, options={"num_ctx": 16384}, keep_alive=360
     )
     return response["response"]
 
@@ -37,8 +39,8 @@ async def process_turn(
         "characters as needed. Keep the story engaging and coherent. Keep the plot challenging, "
         "acting as any antagonists or obstacles the players may face."
     )
-
-    response = await client.generate(
-        model=OLLAMA_MODEL, prompt=prompt, stream=False, options={"num_ctx": 16384}
+    print(f"Processing turn, prompt: {prompt}")
+    response = await CLIENT.generate(
+        model=OLLAMA_MODEL, prompt=prompt, stream=False, options={"num_ctx": 16384}, keep_alive=360
     )
     return response["response"]

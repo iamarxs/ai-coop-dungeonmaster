@@ -1,1 +1,1 @@
-OLLAMA_MODEL = "llama2"
+OLLAMA_MODEL = "llama3.2:latest"

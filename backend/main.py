@@ -1,11 +1,12 @@
 import uuid
 from typing import Dict, List, Optional
 
-from ai import generate_initial_story, process_turn
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from models import Game, Player, Turn
 from pydantic import BaseModel
+
+from .ai import generate_initial_story, process_turn
+from .models import Game, Player, Turn
 
 app = FastAPI()
 
@@ -129,7 +130,7 @@ def get_game_status(game_id: str):
     if game_id not in games:
         raise HTTPException(status_code=404, detail="Game not found")
     game = games[game_id]
-    return {"status": game.status, "players": [p.dict() for p in game.players]}
+    return {"status": game.status, "players": [p.model_dump() for p in game.players]}
 
 
 @app.websocket("/ws/{game_id}/{player_id}")
