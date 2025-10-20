@@ -2,6 +2,8 @@
 
 This is a web-based multiplayer text adventure game where players can join a host's instance, and an AI (Ollama) acts as the game master.
 
+***Note: This project has been abandoned for a pure CLI based version. My unfamiliarity with React made it a pain in the ass to work on the frontend.***
+
 ## Project Structure
 
 -   `backend/`: Contains the Python FastAPI server.
